@@ -274,6 +274,14 @@ const INF = {
   }
 };
 
+/* Revenue attributed to organic social, from the PR agency's GA ecommerce report (monthly $).
+   Ecommerce/booking revenue exists for the Appellation property site only; Folia + Beeline (restaurants, OpenTable) have none → null = no ecommerce revenue. */
+const REV = {
+  appellation:[null,null,null,null,null,null,null,null,814],
+  folia:      [null,null,null,null,null,null,null,null,null],
+  beeline:    [null,null,null,null,null,null,null,null,null]
+};
+
 /* ============ helpers ============ */
 const BRONZE="#9b6838", ESP="#2b291f", MUTED="#8c8779", LINE="#e1ddd5";
 const fmt=n=>n==null?"—":n.toLocaleString("en-US");
@@ -303,7 +311,7 @@ function combined(channel,metric){
 
 /* ============ snapshot ============ */
 function renderSnapshot(){
-  const igV=combined('ig','views');
+  const igEng=combined('ig','interactions');
   const inf=INF[MONTHS[cur].trim()] || INF[MONTHS[cur]];
   const m=MONTHS[cur].trim();
   let html=`<div class="page-title serif">The month at a glance</div>
@@ -322,12 +330,12 @@ function renderSnapshot(){
     </div>`;
   }
 
-  html+=`<div class="chart-card"><div class="chart-head"><div class="ttl serif">Combined Instagram organic views over time</div></div>
-    <div class="chart-box"><canvas id="snapChart" role="img" aria-label="Combined Instagram organic views by month"></canvas></div></div>`;
+  html+=`<div class="chart-card"><div class="chart-head"><div class="ttl serif">Combined Instagram engagement over time</div></div>
+    <div class="chart-box"><canvas id="snapChart" role="img" aria-label="Combined Instagram interactions by month"></canvas></div></div>`;
 
   html+=`<div class="footnote">Organic figures only; paid/boosted reach is excluded throughout. Where the Instagram app blends organic and paid, the Meta Business Suite “From organic” value is used. Views for Sep&nbsp;2025–Mar&nbsp;2026 were pulled from the app top-line and may include some paid; May&nbsp;2026 is the first cleanly separated organic month. February and April 2026 are being backfilled brand by brand; trend lines connect across any month still pending. Organic reach for Folia and Beeline is only available from early 2026, so those reach lines begin partway through.</div>`;
   document.getElementById('p-snapshot').innerHTML=html;
-  drawSnap(igV);
+  drawSnap(igEng);
 }
 function combinedFollowGrowth(){
   return MONTHS.map((_,i)=>{let s=0,any=false;for(const k of ['appellation','folia','beeline']){const a=D[k].fb.follows;}
@@ -343,14 +351,17 @@ function brandCard(key){
     : '<span class="wm-folia" style="font-size:21px">Beeline</span>';
   const row=(lbl,val)=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:5px"><span>${lbl}</span><strong style="color:var(--espresso)">${fmt(val)}</strong></div>`;
   const sub=(t,top)=>`<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-top:${top}px;margin-bottom:1px;border-top:1px solid var(--line);padding-top:9px">${t}</div>`;
+  const r=REV[key][cur];
+  const revBlock=r==null?'':`<div style="display:flex;justify-content:space-between;align-items:baseline;background:#ece2d3;border-radius:8px;padding:9px 12px;margin-bottom:4px">
+    <span style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--bronze)">Revenue · organic social</span>
+    <strong style="font-family:'Cormorant Garamond',serif;font-size:21px;color:var(--bronze)">$${r.toLocaleString()}</strong></div>`;
   return `<div class="tile" style="padding:16px 18px">
-    <div style="min-height:30px;margin-bottom:4px">${wm}</div>
+    <div style="min-height:30px;margin-bottom:6px">${wm}</div>
+    ${revBlock}
     ${sub('Instagram',2)}
-    ${row('Organic views',b.ig.views[cur])}
     ${row('Interactions',b.ig.interactions[cur])}
     ${row('Followers',b.ig.followers[cur])}
     ${sub('Facebook',12)}
-    ${row('Organic views',b.fb.views[cur])}
     ${row('Interactions',b.fb.interactions[cur])}
     ${row('Followers',b.fb.followers[cur])}
   </div>`;
