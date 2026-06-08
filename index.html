@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appellation · Social Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --cream:#efedea; --bronze:#9b6838; --espresso:#2b291f;
+    --card:#f7f5f1; --line:#e1ddd5;
+    --muted:#8c8779; --up:#5f7a52; --down:#b3543f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--cream);color:var(--espresso);font-family:'Inter',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .serif{font-family:'Cormorant Garamond',Georgia,serif}
+  a{color:var(--bronze);text-decoration:none}
+
+  /* Header */
+  header{background:var(--espresso);color:var(--cream);padding:26px 40px 22px}
+  .head-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;max-width:1180px;margin:0 auto}
+  .logo-wrap{display:flex;flex-direction:column;gap:10px}
+  .logo-wrap svg{height:17px;width:auto}
+  .subtitle{font-family:'Cormorant Garamond',serif;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:#c9b79f}
+  .month-pick{display:flex;align-items:center;gap:10px}
+  .month-pick label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#b6a98f}
+  select#month{background:#3a382c;color:var(--cream);border:1px solid #57543f;border-radius:7px;padding:8px 12px;font-family:inherit;font-size:14px;cursor:pointer}
+
+  /* Nav */
+  nav{background:#24221a;display:flex;justify-content:center;gap:4px;padding:0 20px;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+  nav button{background:none;border:none;color:#b6a98f;font-family:'Cormorant Garamond',serif;font-size:18px;letter-spacing:.04em;padding:13px 20px;cursor:pointer;border-bottom:2px solid transparent;transition:.18s}
+  nav button:hover{color:var(--cream)}
+  nav button.active{color:var(--cream);border-bottom-color:var(--bronze)}
+
+  main{max-width:1180px;margin:0 auto;padding:34px 40px 70px}
+  .page{display:none;animation:fade .35s ease}
+  .page.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .page-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:500;letter-spacing:.01em}
+  .page-sub{color:var(--muted);font-size:13.5px;margin-top:3px;margin-bottom:26px}
+  .section-label{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--bronze);margin:30px 0 14px;display:flex;align-items:center;gap:12px}
+  .section-label::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g5{grid-template-columns:repeat(5,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:900px){.g4,.g5,.g3{grid-template-columns:repeat(2,1fr)}}
+
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px 18px}
+  .tile .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+  .tile .val{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:600;line-height:1}
+  .tile .delta{font-size:12.5px;margin-top:7px;font-weight:500}
+  .delta.up{color:var(--up)} .delta.down{color:var(--down)} .delta.flat{color:var(--muted)}
+  .tile.hero,.tile.bronze{background:var(--card);color:var(--espresso);border:1px solid var(--line);border-top:2px solid var(--bronze)}
+  .tile.hero .lbl,.tile.bronze .lbl{color:var(--muted)}
+  .tile.hero .val,.tile.bronze .val{color:var(--espresso)}
+
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:18px 20px 20px;margin-top:16px}
+  .chart-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+  .chart-head .ttl{font-family:'Cormorant Garamond',serif;font-size:19px}
+  .seg{display:flex;gap:4px;flex-wrap:wrap}
+  .seg button{background:none;border:1px solid var(--line);color:var(--muted);font-family:inherit;font-size:11.5px;padding:5px 11px;border-radius:20px;cursor:pointer;transition:.15s}
+  .seg button:hover{border-color:var(--bronze);color:var(--bronze)}
+  .seg button.on{background:var(--bronze);border-color:var(--bronze);color:#fff}
+  .chart-box{position:relative;height:270px;margin-top:8px}
+
+  /* brand wordmarks */
+  .brandmark{margin:6px 0 2px}
+  .wm-app{font-family:'Cormorant Garamond',serif;font-size:30px;letter-spacing:.34em;font-weight:500;text-transform:uppercase}
+  .wm-folia{font-family:'Cormorant Garamond',serif;font-size:34px;letter-spacing:.2em;font-weight:500;text-transform:uppercase}
+  .wm-folia small{display:block;font-size:11px;letter-spacing:.45em;margin-top:2px;color:var(--muted)}
+  .wm-bee{font-family:'Dancing Script',cursive;font-size:42px;color:var(--bronze);line-height:.9}
+  .wm-bee small{font-family:'Inter',sans-serif;display:block;font-size:10px;letter-spacing:.5em;text-transform:uppercase;color:var(--muted);margin-top:-2px}
+  .brand-note{font-size:13.5px;color:#5d5a4e;background:var(--card);border-left:3px solid var(--bronze);padding:11px 16px;border-radius:0 8px 8px 0;margin:4px 0 8px}
+
+  .pill{display:inline-block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;background:#e6ddd0;color:var(--bronze);padding:3px 9px;border-radius:20px;margin-left:8px;vertical-align:middle}
+  .organic-flag{font-size:11.5px;color:var(--muted);margin-top:10px;font-style:italic}
+
+  /* influencer */
+  .act-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+  .act-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:13px}
+  .act-handle{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:600}
+  .act-meta{font-size:12.5px;color:var(--muted)}
+  .act-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:900px){.act-stats{grid-template-columns:repeat(3,1fr)}}
+  .mini .n{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600}
+  .mini .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .act-links{margin-top:12px;font-size:12.5px}
+  .footnote{font-size:11.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--line);padding-top:14px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 178.78 18.78" xmlns="http://www.w3.org/2000/svg" aria-label="Appellation Healdsburg">
+        <g fill="#efedea">
+          <path d="m10.88,16.5c.53,1.3.72,1.69,1.28,1.69v.34h-5.14v-.34c1.09,0,1.49-.24,1.49-.73,0-.26-.1-.56-.26-.96l-.89-2.2H3.11l-.89,2.27c-.15.38-.24.68-.24.91,0,.55.5.72,1.88.72v.34H0v-.34c.84,0,1.25-.27,1.74-1.52l3.26-8.2-.7-1.71h2.58l4,9.74Zm-7.64-2.55h3.98l-2.02-4.97-1.97,4.97Z"/>
+          <path d="m22.38,13v4.08c0,1.01.26,1.11,1.98,1.11v.34h-6.01v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h6.19c2.65,0,4.08.79,4.08,2.99,0,2.05-1.78,3.09-4.63,3.09h-1.61Zm0-5.74v5.4h1.35c1.59,0,2.39-1.06,2.39-2.75s-.51-2.65-1.85-2.65h-1.9Z"/>
+          <path d="m38.92,13v4.08c0,1.01.26,1.11,1.98,1.11v.34h-6.01v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h6.19c2.65,0,4.08.79,4.08,2.99,0,2.05-1.78,3.09-4.63,3.09h-1.61Zm0-5.74v5.4h1.35c1.59,0,2.39-1.06,2.39-2.75s-.51-2.65-1.85-2.65h-1.9Z"/>
+          <path d="m61.94,15.07l-.24,3.47h-10.27v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h10.1l.15,2.94h-.31c-.67-1.85-1.38-2.6-3.73-2.6h-2.19v5.18h2.38c1.49,0,1.98-.65,1.98-1.9h.31v4.13h-.31c0-1.25-.5-1.9-1.98-1.9h-2.38v4.12c0,1.03.31,1.3,1.3,1.3h1.18c2.19,0,2.96-.92,3.69-3.13h.31Z"/>
+          <path d="m68.47,18.54v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h5.84v.36c-1.64,0-1.81.03-1.81,1.08v8.7c0,1.01.34,1.11,1.23,1.11h1.23c1.9,0,3.14-1.69,3.66-3.69h.31l-.44,4.07h-10.01Z"/>
+          <path d="m85.19,18.54v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h5.84v.36c-1.64,0-1.81.03-1.81,1.08v8.7c0,1.01.34,1.11,1.23,1.11h1.23c1.9,0,3.14-1.69,3.66-3.69h.31l-.44,4.07h-10.01Z"/>
+          <path d="m112.33,16.5c.53,1.3.72,1.69,1.28,1.69v.34h-5.14v-.34c1.09,0,1.49-.24,1.49-.73,0-.26-.1-.56-.26-.96l-.89-2.2h-4.25l-.89,2.27c-.15.38-.24.68-.24.91,0,.55.5.72,1.88.72v.34h-3.86v-.34c.84,0,1.25-.27,1.74-1.52l3.26-8.2-.7-1.71h2.58l4,9.74Zm-7.64-2.55h3.98l-2.02-4.97-1.96,4.97Z"/>
+          <path d="m129.29,6.58l.14,3.45h-.31c-.26-1.64-1.14-2.77-3.28-2.77h-.6v9.83c0,1.01.21,1.11,1.93,1.11v.34h-6.32v-.34c1.73,0,1.93-.1,1.93-1.11V7.26h-.6c-2.14,0-3.02,1.13-3.28,2.77h-.31l.14-3.45h.24c.1.29.22.34.77.34h8.54c.55,0,.67-.05.77-.34h.24Z"/>
+          <path d="m135.7,18.54v-.34c1.42,0,1.57-.22,1.57-1.42v-8.1c0-1.2-.15-1.42-1.57-1.42v-.34h5.6v.34c-1.42,0-1.57.22-1.57,1.42v8.1c0,1.2.15,1.42,1.57,1.42v.34h-5.6Z"/>
+          <path d="m147.75,12.73c0-3.64,2.67-6.05,6.46-6.05s6.46,2.41,6.46,6.05-2.67,6.05-6.46,6.05-6.46-2.41-6.46-6.05Zm10.01,0c0-3.71-1.44-5.71-3.55-5.71s-3.55,2-3.55,5.71,1.44,5.71,3.55,5.71,3.55-2,3.55-5.71Z"/>
+          <path d="m174.06,6.92h4.72v.34c-1.35,0-1.93.1-1.93,1.5v9.77h-1.16l-6.92-8.53v6.77c0,1.32.55,1.42,2.37,1.42v.34h-5.01v-.34c1.66,0,2.2-.1,2.2-1.42v-7.28l-1.38-1.71c-.39-.48-.56-.53-.82-.53v-.34h3.38l6.9,8.53v-6.68c0-1.4-.62-1.5-2.36-1.5v-.34Z"/>
+        </g>
+        <circle fill="#efedea" cx="5.71" cy="1.78" r="1.78"/>
+      </svg>
+      <span class="subtitle">Organic Social Performance</span>
+    </div>
+    <div class="month-pick">
+      <label for="month">Reporting month</label>
+      <select id="month"></select>
+    </div>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+
+<main>
+  <section class="page active" id="p-snapshot"></section>
+  <section class="page" id="p-appellation"></section>
+  <section class="page" id="p-folia"></section>
+  <section class="page" id="p-beeline"></section>
+  <section class="page" id="p-influencer"></section>
+</main>
+
+<script>
+/* ============ DATA (organic only). Append a new month to MONTHS and push a value to each array. null = not reported. ============ */
+const MONTHS = ["Sep '25","Oct '25","Nov '25","Dec '25","Jan '26","Feb '26","Mar '26","Apr '26","May '26"];
+/* indices:        0        1        2        3        4        5        6        7        8 */
+
+const D = {
+  appellation: {
+    label:"appellation", mark:"app",
+    note:"Paid carries the headline numbers, but organic engagement and click-through are holding or growing. Organic reach rose even as total (ad-driven) reach fell.",
+    ig:{
+      views:        [163054,157071,232245,192236,103000,122663,230000,134157,135143],
+      reach:        [13190,9166,14722,18941,24900,11803,25400,8867,9506],
+      interactions: [1801,1400,2481,4461,2000,4200,4300,5075,3988],
+      followers:    [1400,2919,3876,4266,4591,4998,5613,6131,6452]
+    },
+    fb:{
+      views:        [null,4701,2487,4703,5800,6382,9100,7925,6206],
+      interactions: [336,385,211,178,63,208,348,389,416],
+      follows:      [20,41,30,21,23,28,36,39,31],
+      followers:    [161,189,210,225,241,260,285,321,350]
+    }
+  },
+  folia: {
+    label:"folia", mark:"folia",
+    note:"Almost a pure organic account (only ~10% of views are paid). The May story is reach expansion: organic reach up sharply and steady follower growth.",
+    ig:{
+      views:        [108490,111900,93377,59245,40400,42835,41500,44127,44269],
+      reach:        [9134,8442,12241,8907,10612,6744,6082,4880,6049],
+      interactions: [1465,1000,1300,905,970,1400,2000,2500,1723],
+      followers:    [594,1006,1271,1375,1524,1633,1720,1840,1946]
+    },
+    fb:{
+      views:        [432,810,1538,1108,1900,837,342,469,1648],
+      interactions: [1,3,9,31,9,3,4,4,54],
+      follows:      [15,10,6,2,6,2,3,7,10],
+      followers:    [13,23,23,25,31,35,40,48,59]
+    }
+  },
+  beeline: {
+    label:"beeline", mark:"bee",
+    note:"100% organic on Instagram this month, no ad spend. Views, reach, and interactions all up sharply, driven by Reels. The clearest proof of organic impact.",
+    ig:{
+      views:        [76033,60000,48600,32640,30300,32052,16100,12024,19413],
+      reach:        [4806,5762,4505,3391,3173,2803,3381,2354,4283],
+      interactions: [650,753,660,462,429,652,409,430,1150],
+      followers:    [792,1064,1143,1213,1335,1423,1471,1508,1558]
+    },
+    fb:{
+      views:        [270,389,131,384,171,111,281,245,584],
+      interactions: [0,0,3,1,0,4,6,1,1],
+      follows:      [16,6,1,1,2,2,3,1,0],
+      followers:    [10,16,18,19,21,23,24,26,27]
+    }
+  }
+};
+
+/* Influencer activations by month (impact page). Add a {month, summary, activations:[...]} record per month. */
+const INF = {
+  "Sep '25": {
+    totals:{ activations:3, audience:"268.2K", posts:1, views:25600, reached:null, engagement:2284, follows:null },
+    activations:[
+      { handle:"@everydayalonzo", size:"173K", date:"Sep 2025", partners:"@appellation_healdsburg", type:"Stories",
+        stats:{}, follows:"—", note:"Story content for Appellation building early visibility ahead of the October grand opening.", links:[] },
+      { handle:"@createdbycody", size:"79.3K", date:"Sep 2025", partners:"@appellation_healdsburg", type:"Stories",
+        stats:{}, follows:"—", note:"Behind-the-scenes story content optimized for event visibility.", links:[] },
+      { handle:"@sonomacountyfavs", size:"15.9K", date:"Sep 2025", partners:"@foliabarandkitchen", type:"Reel + 4 stories",
+        stats:{Views:25600,Likes:794,Shares:1198,Saves:288,Reposts:4}, follows:"—", note:"Folia activation: one reel plus four stories, 2d 12h total watch time. The reel alone drove 1,198 shares.", links:[] }
+    ]
+  },
+  "Oct '25": {
+    totals:{ activations:2, audience:"29.2K", posts:4, views:10700, reached:null, engagement:656, follows:null },
+    activations:[
+      { handle:"@audratavelli", size:"13.7K", date:"Oct 2025 · Grand Opening", partners:"@appellation_healdsburg · @beelinerooftop", type:"2 reels + stories",
+        stats:{Views:5500,Likes:287,Shares:35,Saves:23,Reposts:4}, follows:"—", note:"Covered the Grand Opening for Appellation plus a dedicated Beeline reel. Figures combined across both pieces.", links:[] },
+      { handle:"@allyverthewino", size:"15.5K", date:"Oct 2025 · Grand Opening", partners:"@appellation_healdsburg · @beelinerooftop", type:"Reel + carousel + stories",
+        stats:{Views:5200,Likes:283,Shares:14,Saves:6,Reposts:4}, follows:"—", note:"Grand Opening reel for Appellation plus a Beeline carousel. Figures combined across both pieces.", links:[] }
+    ]
+  },
+  "Nov '25": {
+    totals:{ activations:3, audience:"508K", posts:2, views:14500, reached:544000, engagement:1206, follows:null },
+    activations:[
+      { handle:"@dilekstudzinski", size:"284K", date:"Nov 2025 · hosted stay", partners:"@appellation_healdsburg", type:"80+ stories",
+        stats:{}, follows:"—", note:"Hosted stay with 80+ stories highlighting the property, testing a unique discount code. In-grid content reported the following month.", links:[] },
+      { handle:"@katwalksf", size:"105K", date:"Nov 2025", partners:"with @katfoodsf (36.3K)", type:"Reel",
+        stats:{Views:11700,Likes:1000,Shares:16,Saves:16,Reposts:3}, follows:"—", note:"Top performer of the month at 8h 13m total watch time.", links:[] },
+      { handle:"@kokoshanne", size:"119K", date:"Nov 2025", partners:"@appellation_healdsburg", type:"Reel + stories",
+        stats:{Views:2800,Likes:147,Shares:13,Saves:9,Reposts:2}, follows:"—", note:"4h 40m total watch time. Part of an estimated +544K combined reach for the month.", links:[] }
+    ]
+  },
+  "Dec '25": {
+    totals:{ activations:1, audience:"1M", posts:1, views:null, reached:null, engagement:null, follows:null },
+    activations:[
+      { handle:"@corporate_bro", size:"1M", date:"Dec 2025 · hosted stay", partners:"@appellation_healdsburg · Terroir Spa · @beelinerooftop", type:"Stories (reel to follow)",
+        stats:{}, follows:"—", note:"Million-follower hosted stay. Story coverage across the hotel, spa and Beeline in December; the headline reel posted in January and pulled 656K views.", links:[] }
+    ]
+  },
+  "Jan '26": {
+    totals:{ activations:5, audience:"1.46M", posts:6, views:700000, reached:null, engagement:25796, follows:null },
+    activations:[
+      { handle:"@corporate_bro", size:"1M", date:"Jan 2026", partners:"@appellation_healdsburg", type:"Reel",
+        stats:{Views:656000,Likes:12600,Shares:11600,Reposts:205}, follows:"—", note:"The standout of the entire period: 656K views and 11.6K shares from the million-follower stay.", links:[] },
+      { handle:"@fezzyfel", size:"296K", date:"Jan 2026 · NYE", partners:"@appellation_healdsburg", type:"Reel + post",
+        stats:{Views:36200,Likes:755,Shares:53,Saves:11,Reposts:8}, follows:"—", note:"New Year party coverage across a reel (17.2K views) and a feed post (19K views).", links:[] },
+      { handle:"@wtfab", size:"127K", date:"Jan 2026 · NYE", partners:"@appellation_healdsburg · @foliabarandkitchen", type:"Post",
+        stats:{Comments:18,Reposts:1}, follows:"—", note:"NYE feed post tagged across Appellation and Folia.", links:[] },
+      { handle:"@nakyajoi", size:"18.6K", date:"Jan 2026", partners:"@appellation_healdsburg", type:"Post",
+        stats:{Likes:111,Shares:3,Reposts:4}, follows:"—", note:"Feed post from a hosted stay.", links:[] },
+      { handle:"@sonomacountyfavs", size:"17.1K", date:"Jan 2026", partners:"@appellation_healdsburg", type:"Reel",
+        stats:{Views:7800,Likes:267,Shares:96,Saves:61,Reposts:3}, follows:"—", note:"Reel celebrating the property with strong save and share rates.", links:[] }
+    ]
+  },
+  "Mar '26": {
+    totals:{ activations:2, audience:"86.3K", posts:2, views:245934, reached:null, engagement:11180, follows:null },
+    activations:[
+      { handle:"@napadad", size:"47.6K", date:"Mar 2026", partners:"Meta @napadad + TikTok @napa.dad", type:"Cross-platform reel",
+        stats:{Views:245934,Likes:8133,Comments:475,Shares:2054,Saves:385}, follows:"—", note:"Cross-platform activation across Instagram and TikTok: 245,934 total views, plus 8 stories shared.", links:[] },
+      { handle:"@cheycheyfromthebay", size:"38.7K", date:"Mar 2026", partners:"@appellation_hotels · @beelinerooftop · @foliabarandkitchen", type:"Carousel",
+        stats:{Likes:88,Comments:21,Shares:22,Reposts:2}, follows:"—", note:"Carousel featuring all three brands, plus 7 stories shared.", links:[] }
+    ]
+  },
+  "May '26": {
+    totals:{ activations:3, audience:"209.8K", posts:5, views:20817, reached:11714, engagement:1090, follows:8 },
+    activations:[
+      { handle:"@ladyandthegentlewoman", size:"95.6K", date:"May 5", partners:"@appellation_hotels · @drycreekvalleywines", type:"Carousel",
+        stats:{Views:13422,Reached:6295,Likes:488,Comments:44,Shares:25,Saves:32}, follows:6,
+        note:"Highest reach of the month, plus 6 direct follows. 78% of views came from Feed, traveling well beyond her own audience. “If you’ve ever wanted to taste what inspiration feels like, stay here.”",
+        links:[["Post","https://www.instagram.com/p/DX-Mu4GkgnW/"]] },
+      { handle:"@mathildatraylor", size:"75.5K", date:"Mother's Day wknd", partners:"Hosted stay · 3 in-grid posts", type:"Reel + carousel + reel",
+        stats:{Views:2357,Reached:1777,Likes:87,Comments:17,Shares:6,Saves:2}, follows:0,
+        note:"One hosted stay produced three pieces of permanent grid content. Numbers shown are the collab reel; the two evergreen posts are ongoing (insights pending).",
+        links:[["Collab reel","https://www.instagram.com/p/DYry8fPsD7V/"],["Evergreen carousel","https://www.instagram.com/p/DYudbx9FJEt/"],["Evergreen reel","https://www.instagram.com/p/DYG3xKyMvjf/"]] },
+      { handle:"@cheycheyfromthebay", size:"38.7K", date:"May 21", partners:"@appellation_hotels · @beelinerooftop · @foliabarandkitchen", type:"Reel",
+        stats:{Views:5038,Reached:3642,Likes:200,Comments:36,Shares:78,Saves:60}, follows:2,
+        note:"Strongest engagement of the month (5.2% like rate, 78 shares, 60 saves) and the only activation to feature all three brands in a single reel.",
+        links:[["Reel","https://www.instagram.com/p/DYn_BrJJVvM/"]] }
+    ]
+  }
+};
+
+/* ============ helpers ============ */
+const BRONZE="#9b6838", ESP="#2b291f", MUTED="#8c8779", LINE="#e1ddd5";
+const fmt=n=>n==null?"—":n.toLocaleString("en-US");
+const monthsWithData=[0,1,2,3,4,5,6,7,8]; /* indices that have data */
+let cur=8; /* current month index, default May '26 */
+
+function prevIdx(arr,i){for(let j=i-1;j>=0;j--){if(arr[j]!=null)return j;}return -1;}
+function deltaHTML(arr,i,opts={}){
+  const v=arr[i]; if(v==null) return '<div class="delta flat">no data</div>';
+  const p=prevIdx(arr,i); if(p<0) return '<div class="delta flat">baseline</div>';
+  const pv=arr[p];
+  if(opts.abs){ const d=v-pv; const cls=d>0?'up':(d<0?'down':'flat'); const s=d>0?'+':''; return `<div class="delta ${cls}">${s}${d.toLocaleString()} vs ${MONTHS[p].trim()}</div>`; }
+  const pct=pv===0?100:((v-pv)/Math.abs(pv)*100); const cls=pct>0?'up':(pct<0?'down':'flat'); const ar=pct>0?'↑':(pct<0?'↓':'→');
+  return `<div class="delta ${cls}">${ar} ${Math.abs(pct).toFixed(1)}% vs ${MONTHS[p].trim()}</div>`;
+}
+function tile(lbl,arr,i,opts={}){
+  const v=arr[i];
+  return `<div class="tile ${opts.cls||''}"><div class="lbl">${lbl}</div><div class="val">${fmt(v)}</div>${deltaHTML(arr,i,opts)}</div>`;
+}
+function combined(channel,metric){
+  return MONTHS.map((_,i)=>{
+    let s=0,any=false;
+    for(const k of ['appellation','folia','beeline']){const a=D[k][channel][metric];if(a&&a[i]!=null){s+=a[i];any=true;}}
+    return any?s:null;
+  });
+}
+
+/* ============ snapshot ============ */
+function renderSnapshot(){
+  const igV=combined('ig','views');
+  const inf=INF[MONTHS[cur].trim()] || INF[MONTHS[cur]];
+  const m=MONTHS[cur].trim();
+  let html=`<div class="page-title serif">The month at a glance</div>
+    <div class="page-sub">${m} · organic performance across all three brands</div>
+
+    <div class="section-label">How each brand is performing</div>
+    <div class="grid g3">${brandCard('appellation')}${brandCard('folia')}${brandCard('beeline')}</div>`;
+
+  if(inf){
+    html+=`<div class="section-label">Influencer impact</div>
+    <div class="grid g4">
+      <div class="tile bronze"><div class="lbl">Activations</div><div class="val">${inf.totals.activations}</div><div class="delta" style="color:var(--bronze)">${inf.totals.posts} in-grid posts</div></div>
+      <div class="tile hero"><div class="lbl">Creator audience reached</div><div class="val">${inf.totals.audience}</div><div class="delta" style="color:var(--muted)">combined following</div></div>
+      ${tileStatic('Post views',inf.totals.views)}
+      ${tileStatic('Accounts reached',inf.totals.reached)}
+    </div>`;
+  }
+
+  html+=`<div class="chart-card"><div class="chart-head"><div class="ttl serif">Combined Instagram organic views over time</div></div>
+    <div class="chart-box"><canvas id="snapChart" role="img" aria-label="Combined Instagram organic views by month"></canvas></div></div>`;
+
+  html+=`<div class="footnote">Organic figures only; paid/boosted reach is excluded throughout. Where the Instagram app blends organic and paid, the Meta Business Suite “From organic” value is used. Views for Sep&nbsp;2025–Mar&nbsp;2026 were pulled from the app top-line and may include some paid; May&nbsp;2026 is the first cleanly separated organic month. February and April 2026 are being backfilled brand by brand; trend lines connect across any month still pending. Organic reach for Folia and Beeline is only available from early 2026, so those reach lines begin partway through.</div>`;
+  document.getElementById('p-snapshot').innerHTML=html;
+  drawSnap(igV);
+}
+function combinedFollowGrowth(){
+  return MONTHS.map((_,i)=>{let s=0,any=false;for(const k of ['appellation','folia','beeline']){const a=D[k].fb.follows;}
+    /* net IG growth derived from total followers diff per brand */
+    for(const k of ['appellation','folia','beeline']){const f=D[k].ig.followers;const p=prevIdx(f,i);if(f[i]!=null&&p>=0){s+=f[i]-f[p];any=true;}}
+    return any?s:null;});
+}
+function tileStatic(lbl,v){return `<div class="tile"><div class="lbl">${lbl}</div><div class="val">${fmt(v)}</div></div>`;}
+function brandCard(key){
+  const b=D[key];
+  const wm = key==='appellation'?'<span class="wm-app" style="font-size:19px">Appellation</span>'
+    : key==='folia'?'<span class="wm-folia" style="font-size:21px">Folia</span>'
+    : '<span class="wm-folia" style="font-size:21px">Beeline</span>';
+  const row=(lbl,val)=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:5px"><span>${lbl}</span><strong style="color:var(--espresso)">${fmt(val)}</strong></div>`;
+  const sub=(t,top)=>`<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-top:${top}px;margin-bottom:1px;border-top:1px solid var(--line);padding-top:9px">${t}</div>`;
+  return `<div class="tile" style="padding:16px 18px">
+    <div style="min-height:30px;margin-bottom:4px">${wm}</div>
+    ${sub('Instagram',2)}
+    ${row('Organic views',b.ig.views[cur])}
+    ${row('Interactions',b.ig.interactions[cur])}
+    ${row('Followers',b.ig.followers[cur])}
+    ${sub('Facebook',12)}
+    ${row('Organic views',b.fb.views[cur])}
+    ${row('Interactions',b.fb.interactions[cur])}
+    ${row('Followers',b.fb.followers[cur])}
+  </div>`;
+}
+
+/* ============ brand page ============ */
+function renderBrand(key){
+  const b=D[key];
+  const markHTML = key==='appellation'?'<div class="wm-app">Appellation</div>'
+    : key==='folia'?'<div class="wm-folia">Folia<small>Bar &amp; Kitchen</small></div>'
+    : '<div class="wm-folia">Beeline<small>Andy’s Rooftop</small></div>';
+  let html=`<div class="brandmark">${markHTML}</div>
+    <div class="page-sub" style="margin-top:8px">${MONTHS[cur].trim()} · organic Instagram &amp; Facebook</div>
+    <div class="brand-note">${b.note}</div>
+
+    <div class="section-label"><i></i>Instagram</div>
+    <div class="grid g4">
+      ${tile('Organic views',b.ig.views,cur,{cls:'hero'})}
+      ${tile('Organic reach',b.ig.reach,cur,{cls:'bronze'})}
+      ${tile('Interactions',b.ig.interactions,cur)}
+      ${tile('Total followers',b.ig.followers,cur)}
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><div class="ttl serif">Instagram trend</div>
+        <div class="seg" data-chart="${key}-ig">
+          <button class="on" data-m="views">Views</button>
+          <button data-m="reach">Reach</button>
+          <button data-m="interactions">Interactions</button>
+          <button data-m="followers">Followers</button>
+        </div></div>
+      <div class="chart-box"><canvas id="${key}-ig-canvas" role="img" aria-label="${key} Instagram trend"></canvas></div>
+    </div>
+
+    <div class="section-label">Facebook</div>
+    <div class="grid g3">
+      ${tile('Organic views',b.fb.views,cur,{cls:'hero'})}
+      ${tile('Interactions',b.fb.interactions,cur)}
+      ${tile('Total followers',b.fb.followers,cur)}
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><div class="ttl serif">Facebook trend</div>
+        <div class="seg" data-chart="${key}-fb">
+          <button class="on" data-m="views">Views</button>
+          <button data-m="interactions">Interactions</button>
+          <button data-m="followers">Followers</button>
+        </div></div>
+      <div class="chart-box"><canvas id="${key}-fb-canvas" role="img" aria-label="${key} Facebook trend"></canvas></div>
+    </div>
+    <div class="organic-flag">Facebook has no organic reach metric in Meta, so reach is omitted for Facebook by design.</div>`;
+  document.getElementById('p-'+key).innerHTML=html;
+  makeTrend(key+'-ig', b.ig, 'views');
+  makeTrend(key+'-fb', b.fb, 'views');
+}
+
+/* ============ influencer page ============ */
+function renderInfluencer(){
+  const inf=INF[MONTHS[cur].trim()];
+  const el=document.getElementById('p-influencer');
+  if(!inf){el.innerHTML=`<div class="page-title serif">Influencer activations</div><div class="page-sub">No activations logged for ${MONTHS[cur].trim()}.</div>`;return;}
+  const t=inf.totals;
+  let html=`<div class="page-title serif">Influencer activations</div>
+    <div class="page-sub">${MONTHS[cur].trim()} · the impact of earned creator partnerships</div>
+    <div class="grid g4">
+      <div class="tile bronze"><div class="lbl">Activations</div><div class="val">${t.activations}</div><div class="delta" style="color:var(--bronze)">${t.posts} in-grid posts produced</div></div>
+      <div class="tile hero"><div class="lbl">Combined creator audience</div><div class="val">${t.audience}</div><div class="delta" style="color:var(--muted)">total following</div></div>
+      ${tileStatic('Post views',t.views)}
+      ${tileStatic('Accounts reached',t.reached)}
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      ${tileStatic('Total engagements',t.engagement)}
+      ${tileStatic('Direct new follows driven',t.follows)}
+    </div>
+    <div class="section-label">Activation detail</div>`;
+  for(const a of inf.activations){
+    const stats=Object.entries(a.stats).map(([k,v])=>`<div class="mini"><div class="n">${fmt(v)}</div><div class="k">${k}</div></div>`).join('');
+    const links=a.links.map(l=>`<a href="${l[1]}" target="_blank">${l[0]} ↗</a>`).join(' &nbsp;·&nbsp; ');
+    html+=`<div class="act-card">
+      <div class="act-head">
+        <div><span class="act-handle">${a.handle}</span> <span class="pill">${a.size}</span></div>
+        <div class="act-meta">${a.date} · ${a.type}</div>
+      </div>
+      <div class="act-meta" style="margin-bottom:12px">${a.partners}</div>
+      <div class="act-stats">${stats}<div class="mini"><div class="n">${a.follows}</div><div class="k">Follows</div></div></div>
+      <div class="brand-note" style="margin-top:14px">${a.note}</div>
+      <div class="act-links">${links}</div>
+    </div>`;
+  }
+  html+=`<div class="footnote">Reach and engagement reflect performance on each creator’s own channel (earned media). @mathildatraylor’s two evergreen posts continue to accrue views and are reported here as ongoing.</div>`;
+  el.innerHTML=html;
+}
+
+/* ============ charts ============ */
+const charts={};
+function lab(n){return n==null?'':(n>=100000?Math.round(n/1000)+'k':n.toLocaleString());}
+const valueLabel={
+  id:'valueLabel',
+  afterDatasetsDraw(chart){
+    const meta=chart.getDatasetMeta(0); if(!meta)return;
+    const ctx=chart.ctx; ctx.save();
+    ctx.font='600 9.5px Inter,sans-serif'; ctx.fillStyle=ESP; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    meta.data.forEach((pt,i)=>{const v=chart.data.datasets[0].data[i]; if(v==null)return; ctx.fillText(lab(v),pt.x,pt.y-7);});
+    ctx.restore();
+  }
+};
+function baseOpts(){return{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:ESP,padding:10,titleFont:{family:'Inter'},bodyFont:{family:'Inter'},callbacks:{label:c=>' '+(c.parsed.y==null?'no data':c.parsed.y.toLocaleString())}}},
+  scales:{x:{grid:{display:false},ticks:{color:MUTED,font:{family:'Inter',size:11}}},
+          y:{grid:{color:LINE},ticks:{color:MUTED,font:{family:'Inter',size:11},callback:v=>v>=1000?(v/1000)+'k':v},beginAtZero:true}},
+  elements:{point:{radius:MONTHS.map((_,i)=>i===cur?5:3),hoverRadius:6}}};}
+function lineData(arr){return{labels:MONTHS.map(m=>m.trim()),datasets:[{data:arr,borderColor:BRONZE,backgroundColor:'rgba(155,104,56,.08)',borderWidth:2.5,fill:true,tension:.32,spanGaps:true,
+  pointBackgroundColor:arr.map((_,i)=>i===cur?ESP:BRONZE),pointBorderColor:'#fff',pointBorderWidth:1.5}]};}
+function makeTrend(id,obj,metric){
+  const ctx=document.getElementById(id+'-canvas'); if(!ctx)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(ctx,{type:'line',data:lineData(obj[metric]),options:baseOpts(),plugins:[valueLabel]});
+  charts[id]._obj=obj;
+}
+function drawSnap(arr){
+  const ctx=document.getElementById('snapChart'); if(!ctx)return;
+  if(charts.snap)charts.snap.destroy();
+  charts.snap=new Chart(ctx,{type:'line',data:lineData(arr),options:baseOpts()});
+}
+
+/* ============ nav + month ============ */
+const PAGES=[['snapshot','Snapshot'],['appellation','Appellation'],['folia','Folia'],['beeline','Beeline'],['influencer','Influencer']];
+function buildNav(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML=PAGES.map((p,i)=>`<button data-p="${p[0]}" class="${i===0?'active':''}">${p[1]}</button>`).join('');
+  nav.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{
+    nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+    document.getElementById('p-'+btn.dataset.p).classList.add('active');
+    setTimeout(()=>Object.values(charts).forEach(c=>c&&c.resize()),30);
+  });
+}
+function buildMonth(){
+  const sel=document.getElementById('month');
+  sel.innerHTML=monthsWithData.map(i=>`<option value="${i}" ${i===cur?'selected':''}>${MONTHS[i].trim()}</option>`).join('');
+  sel.onchange=()=>{cur=+sel.value;renderAll();};
+}
+function renderAll(){renderSnapshot();renderBrand('appellation');renderBrand('folia');renderBrand('beeline');renderInfluencer();bindSegs();}
+function bindSegs(){
+  document.querySelectorAll('.seg').forEach(seg=>{
+    const id=seg.dataset.chart;
+    seg.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{
+      seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+      const c=charts[id]; if(!c)return; const m=btn.dataset.m;
+      c.data=lineData(c._obj[m]); c.options=baseOpts(); c.update();
+    });
+  });
+}
+buildNav();buildMonth();renderAll();
+</script>
+</body>
+</html>
